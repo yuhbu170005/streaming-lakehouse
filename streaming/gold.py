@@ -16,7 +16,7 @@ def candles(trades, *, repaired=False):
         F.max_by("price", order).alias("close"),
         F.sum(volume).alias("volume"),
         F.sum(
-            F.col("price").cast("decimal(18,8)") * volume.cast("decimal(18,8)")
+            F.col("price").cast("decimal(17,8)") * volume.cast("decimal(20,8)")
         ).alias("quote_volume"),
         F.sum("trade_count").alias("trade_count"),
         F.sum(F.when(~F.col("is_buyer_maker"), volume).otherwise(zero)).alias(

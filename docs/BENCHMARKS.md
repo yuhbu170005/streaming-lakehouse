@@ -44,3 +44,7 @@ Metabase queries ran over populated marts, and dbt reported 14 passes across fou
 The synthetic run used commit `8f0611d`, a 10-vCPU ARM64 Docker VM, and approximately 13.6 GiB of VM memory.
 
 The isolated Spark `MERGE` benchmark used four inserts per batch size and excluded the first sample. The medians were 324.88 ms at 100 rows, 843.29 ms at 1,000 rows, and 325.46 ms at 10,000 rows. These measurements came from a small target table and shared local compute, so they describe the observed runs rather than a scaling curve.
+
+The first sustained measurements were interrupted when the host entered idle sleep at 02:27 on 2026-11-08. Those runs produced no accepted measurements. The harness now writes progress files and invalidates sampling gaps longer than two minutes. On macOS, `caffeinate -is make acceptance-live` holds power assertions for the duration of the acceptance command.
+
+The isolated demo also observed the no-data alert firing 235.51 seconds after its producer stopped. The daily maintenance procedures completed against the demo warehouse. Silver continued to consume new appends after Bronze compaction.

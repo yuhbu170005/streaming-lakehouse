@@ -38,7 +38,9 @@ def select_symbols(count, *, synthetic):
 
 def system_stats(project):
     rows = subprocess.check_output(
-        ["docker", "stats", "--no-stream", "--format", "{{json .}}"], text=True
+        ["docker", "stats", "--no-stream", "--format", "{{json .}}"],
+        text=True,
+        timeout=20,
     ).splitlines()
     return [
         {"name": row["Name"], "cpu": row["CPUPerc"], "memory": row["MemUsage"]}
@@ -47,9 +49,24 @@ def system_stats(project):
     ]
 
 
+def save_report(path, report):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(report, indent=2) + "\n")
+    temporary.replace(path)
+
+
 def measure(args):
     if args.duration <= 0 or args.warmup < 0:
         raise ValueError("duration must be positive and warmup must be nonnegative")
+    progress_path = args.output.with_suffix(".progress.json")
+    progress = {
+        "mode": args.mode,
+        "project": args.project,
+        "planned_duration_seconds": args.duration,
+        "status": "warming_up",
+    }
+    save_report(progress_path, progress)
     print(
         f"Waiting {args.warmup}s before {args.duration}s {args.mode} measurement",
         flush=True,
@@ -65,16 +82,40 @@ def measure(args):
             "{{.Architecture}} {{.NCPU}} CPU {{.MemTotal}} bytes",
         ],
         text=True,
+        timeout=20,
     ).strip()
     samples = []
+    progress.update(status="running", started_utc=started.isoformat(), commit=commit)
+    print(f"Measurement started at {started.isoformat()} ({commit[:7]})", flush=True)
     deadline = time.monotonic() + args.duration
-    while time.monotonic() < deadline:
-        samples.append(
-            {
-                "at": datetime.now(UTC).isoformat(),
-                "containers": system_stats(args.project),
-            }
+    previous = started
+    while True:
+        sample_time = datetime.now(UTC)
+        gap = (sample_time - previous).total_seconds()
+        if gap < 0 or gap > 120:
+            progress.update(
+                status="interrupted",
+                interrupted_at=sample_time.isoformat(),
+                gap_seconds=gap,
+                completed_samples=len(samples),
+            )
+            save_report(progress_path, progress)
+            raise SystemExit(
+                f"Measurement interrupted by a {gap:.1f}s clock or sampling gap"
+            )
+        if time.monotonic() >= deadline:
+            break
+        sample = {"at": sample_time.isoformat()}
+        try:
+            sample["containers"] = system_stats(args.project)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            sample["error"] = type(error).__name__
+        samples.append(sample)
+        progress.update(
+            last_sample_utc=sample_time.isoformat(), completed_samples=len(samples)
         )
+        save_report(progress_path, progress)
+        previous = sample_time
         time.sleep(max(0, min(60, deadline - time.monotonic())))
     ended = datetime.now(UTC)
     if args.settle:
@@ -119,8 +160,9 @@ def measure(args):
         "reconciliation": statuses,
         "container_samples": samples,
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2) + "\n")
+    save_report(args.output, report)
+    progress.update(status="measured", output=str(args.output))
+    save_report(progress_path, progress)
     print(
         json.dumps(
             {key: value for key, value in report.items() if key != "container_samples"}

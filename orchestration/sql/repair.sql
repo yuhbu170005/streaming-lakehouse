@@ -25,7 +25,7 @@ USING (
             max(s.price) AS high, min(s.price) AS low,
             max_by(s.price, ROW(s.trade_time, s.agg_trade_id)) AS close,
             sum(s.quantity) AS volume,
-            sum(CAST(s.price AS DECIMAL(18,8)) * CAST(s.quantity AS DECIMAL(18,8))) AS quote_volume,
+            sum(CAST(s.price AS DECIMAL(17,8)) * CAST(s.quantity AS DECIMAL(20,8))) AS quote_volume,
             sum(s.trade_count) AS trade_count,
             sum(if(NOT s.is_buyer_maker, s.quantity, DECIMAL '0')) AS buy_volume,
             sum(if(s.is_buyer_maker, s.quantity, DECIMAL '0')) AS sell_volume,

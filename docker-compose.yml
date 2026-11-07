@@ -196,7 +196,7 @@ services:
       catalog:
         condition: service_healthy
     ports: ["127.0.0.1:${TRINO_HOST_PORT:-18080}:8080"]
-    mem_limit: 2g
+    mem_limit: 3g
     restart: unless-stopped
     profiles: [query]
 
