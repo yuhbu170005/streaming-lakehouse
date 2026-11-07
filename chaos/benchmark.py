@@ -4,10 +4,12 @@ import argparse
 import json
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from statistics import median
+from urllib.parse import urlencode
 from urllib.request import urlopen
 
 from orchestration.operations import execute, repair, sql_file
@@ -15,7 +17,7 @@ from orchestration.operations import execute, repair, sql_file
 SPOT = "https://data-api.binance.vision"
 
 
-def select_symbols(count, *, synthetic):
+def select_symbols(count, *, synthetic, require_recent=False):
     if synthetic:
         return [f"LOAD{index:03d}USDT" for index in range(count)]
     with urlopen(f"{SPOT}/api/v3/exchangeInfo", timeout=30) as response:
@@ -31,9 +33,39 @@ def select_symbols(count, *, synthetic):
         tickers = json.load(response)
     eligible = [row for row in tickers if row["symbol"] in active]
     eligible.sort(key=lambda row: Decimal(row["quoteVolume"]), reverse=True)
+    if require_recent:
+        return recently_traded(eligible, count)
     if len(eligible) < count:
         raise ValueError(f"Only {len(eligible)} eligible symbols available")
     return [row["symbol"] for row in eligible[:count]]
+
+
+def recently_traded(tickers, count):
+    def has_trade(symbol):
+        params = urlencode({"symbol": symbol, "limit": 1})
+        with urlopen(f"{SPOT}/api/v3/aggTrades?{params}", timeout=15) as response:
+            rows = json.load(response)
+        return bool(rows and rows[-1]["T"] >= int(time.time() * 1000) - 120_000)
+
+    selected = []
+    symbols = [row["symbol"] for row in tickers]
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for index in range(0, len(symbols), 4):
+            group = symbols[index : index + 4]
+            selected.extend(
+                symbol
+                for symbol, has_recent in zip(
+                    group, pool.map(has_trade, group), strict=True
+                )
+                if has_recent
+            )
+            if len(selected) >= count:
+                return selected[:count]
+            # Each aggregate-trade call costs four weight units against the shared IP limit.
+            time.sleep(1)
+    raise ValueError(
+        f"Only {len(selected)} symbols traded in the requested recent window"
+    )
 
 
 def system_stats(project):
@@ -124,10 +156,10 @@ def measure(args):
     start_sql = f"from_iso8601_timestamp('{started.isoformat()}')"
     end_sql = f"from_iso8601_timestamp('{ended.isoformat()}')"
     elapsed = (ended - started).total_seconds()
-    rows, symbols, latency, recovered = execute(
+    rows, symbols, latency, recovered, observed = execute(
         "SELECT count(*), count(DISTINCT symbol), "
         "approx_percentile(date_diff('millisecond', trade_time, processed_at), "
-        "ARRAY[0.5,0.95,0.99]), count_if(is_backfill) "
+        "ARRAY[0.5,0.95,0.99]), count_if(is_backfill), array_agg(DISTINCT symbol) "
         f"FROM lake.silver.aggtrade WHERE processed_at >= {start_sql} "
         f"AND processed_at < {end_sql}"
     )[0]
@@ -154,6 +186,7 @@ def measure(args):
         "warmup_seconds": args.warmup,
         "silver_rows": rows,
         "symbols_seen": symbols,
+        "symbols_observed": sorted(observed or []),
         "silver_rows_per_second": rows / elapsed,
         "latency_ms_p50_p95_p99": latency,
         "backfilled_silver_rows": recovered,
@@ -223,6 +256,7 @@ def main():
     symbols = commands.add_parser("symbols")
     symbols.add_argument("--count", type=int, required=True)
     symbols.add_argument("--synthetic", action="store_true")
+    symbols.add_argument("--require-recent", action="store_true")
     run = commands.add_parser("run")
     run.add_argument("--mode", choices=("live", "synthetic"), required=True)
     run.add_argument("--project", required=True)
@@ -240,7 +274,9 @@ def main():
         if not 1 <= args.count <= 200:
             parser.error("count must be between 1 and 200")
         print("symbols:")
-        for symbol in select_symbols(args.count, synthetic=args.synthetic):
+        for symbol in select_symbols(
+            args.count, synthetic=args.synthetic, require_recent=args.require_recent
+        ):
             print(f"  - {symbol}")
     elif args.action == "compact":
         compact(args.output)

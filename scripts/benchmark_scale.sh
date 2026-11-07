@@ -9,7 +9,8 @@ esac
 mkdir -p data
 project="streaming-lakehouse-scale-$count-$(date -u +%Y%m%d%H%M%S)-$$"
 export SYMBOLS_FILE="./data/symbols-$count.yaml"
-uv run --locked --group operations python -m chaos.benchmark symbols --count "$count" > "$SYMBOLS_FILE"
+uv run --locked --group operations python -m chaos.benchmark symbols --count "$count" \
+    --require-recent > "$SYMBOLS_FILE"
 compose() {
     docker compose -p "$project" -f docker-compose.yml \
         -f compose.scale.yml --profile core --profile query "$@"

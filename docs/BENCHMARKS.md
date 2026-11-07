@@ -90,3 +90,16 @@ Peak sampled resource use across the 29 one-minute samples is shown below. CPU i
 ### Backlog recovery sample
 
 An earlier live 100-symbol run started measuring just after the host woke. It wrote 142,789 Silver rows in 1,801.91 seconds (79.24 rows/s), including 56,262 backfilled rows. The p50/p95/p99 event-time latency was 29,055 / 2,312,826 / 3,013,062 ms. This run measured catch-up from accumulated source history. The report is retained locally as `data/benchmark-scale-100-recovery.json`.
+
+### Live scale and one-hour checks
+
+The scale projects measured producer-to-Silver throughput and latency independently of Gold, BI, and scheduling. The 120-second warm-up was excluded. These were different market windows with different trade activity.
+
+| Configured / observed symbols | Duration | Silver trades | Trades/s | p50 / p95 / p99 latency | Backfilled |
+|---|---:|---:|---:|---:|---:|
+| 100 / 100 | 1,800.74 s | 79,021 | 43.88 | 18,450 / 54,664 / 79,910 ms | 0 |
+| 200 / 199 | 1,800.72 s | 76,835 | 42.67 | 18,542 / 74,041 / 152,181 ms | 0 |
+
+Both runs used `81ba5a8`. The second run completed its measurement but failed the expected-symbol count. The scale command now checks recent trade activity before selecting pairs. The failed coverage report remains in `data/benchmark-scale-200-observed-199.json`.
+
+In the first hour of the primary run, Silver held 64,812 rows and 64,812 distinct trade keys. Reconciliation recorded 1,198 exact matches and two official no-trade candles. Eight scheduled optimization actions recorded 3,379 input files and 19 output files in total across the affected tables.
