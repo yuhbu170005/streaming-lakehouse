@@ -7,6 +7,7 @@ import time
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from statistics import median
 from urllib.request import urlopen
 
 from orchestration.operations import execute, repair, sql_file
@@ -76,6 +77,9 @@ def measure(args):
         )
         time.sleep(max(0, min(60, deadline - time.monotonic())))
     ended = datetime.now(UTC)
+    if args.settle:
+        print(f"Waiting {args.settle}s for the last closed candles", flush=True)
+        time.sleep(args.settle)
     start_sql = f"from_iso8601_timestamp('{started.isoformat()}')"
     end_sql = f"from_iso8601_timestamp('{ended.isoformat()}')"
     elapsed = (ended - started).total_seconds()
@@ -86,22 +90,26 @@ def measure(args):
         f"FROM lake.silver.aggtrade WHERE processed_at >= {start_sql} "
         f"AND processed_at < {end_sql}"
     )[0]
-    repair()
-    sql_file("reconciliation")
-    statuses = dict(
-        execute(
-            "SELECT status, count(*) FROM lake.recon.candle_vs_kline "
-            f"WHERE window_start >= {start_sql} AND window_start < {end_sql} "
-            "GROUP BY 1"
+    statuses = {}
+    if not args.ingest_only:
+        repair()
+        sql_file("reconciliation")
+        statuses = dict(
+            execute(
+                "SELECT status, count(*) FROM lake.recon.candle_vs_kline "
+                f"WHERE window_start >= {start_sql} AND window_start < {end_sql} "
+                "GROUP BY 1"
+            )
         )
-    )
     report = {
         "mode": args.mode,
+        "ingest_only": args.ingest_only,
         "commit": commit,
         "docker_hardware": hardware,
         "started_utc": started.isoformat(),
         "ended_utc": ended.isoformat(),
         "elapsed_seconds": elapsed,
+        "settle_seconds": args.settle,
         "warmup_seconds": args.warmup,
         "silver_rows": rows,
         "symbols_seen": symbols,
@@ -119,6 +127,53 @@ def measure(args):
         )
     )
 
+    if args.expected_symbols and symbols != args.expected_symbols:
+        raise SystemExit(f"Expected {args.expected_symbols} symbols, saw {symbols}")
+    if args.acceptance:
+        if elapsed < 21600 or not statuses.get("match"):
+            raise SystemExit(
+                "Acceptance requires six hours and at least one comparable candle"
+            )
+        if any(
+            statuses.get(status, 0)
+            for status in ("mismatch", "missing_gold", "missing_reference")
+        ):
+            raise SystemExit(f"Reconciliation acceptance failed: {statuses}")
+
+
+def compact(output):
+    table = "lake.bronze.aggtrade_raw"
+    files = 'SELECT count(*) FROM lake.bronze."aggtrade_raw$files"'
+    count = f"SELECT count(*), count(DISTINCT symbol) FROM {table}"
+
+    def timing():
+        samples = []
+        result = None
+        for _ in range(5):
+            started = time.monotonic()
+            result = execute(count)[0]
+            samples.append((time.monotonic() - started) * 1000)
+        return result, median(samples)
+
+    before = execute(files)[0][0]
+    rows_before, ms_before = timing()
+    execute(f"ALTER TABLE {table} EXECUTE optimize(file_size_threshold => '64MB')")
+    after = execute(files)[0][0]
+    rows_after, ms_after = timing()
+    assert rows_before == rows_after, (rows_before, rows_after)
+    report = {
+        "mode": "synthetic",
+        "table": table,
+        "data_files_before": before,
+        "data_files_after": after,
+        "count_query_median_ms_before": ms_before,
+        "count_query_median_ms_after": ms_after,
+        "rows": rows_after,
+    }
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps(report, indent=2))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -132,6 +187,12 @@ def main():
     run.add_argument("--duration", type=int, default=1800)
     run.add_argument("--warmup", type=int, default=60)
     run.add_argument("--output", type=Path, required=True)
+    run.add_argument("--settle", type=int, default=130)
+    run.add_argument("--expected-symbols", type=int)
+    run.add_argument("--acceptance", action="store_true")
+    run.add_argument("--ingest-only", action="store_true")
+    compaction = commands.add_parser("compact")
+    compaction.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.action == "symbols":
         if not 1 <= args.count <= 200:
@@ -139,6 +200,8 @@ def main():
         print("symbols:")
         for symbol in select_symbols(args.count, synthetic=args.synthetic):
             print(f"  - {symbol}")
+    elif args.action == "compact":
+        compact(args.output)
     else:
         measure(args)
 

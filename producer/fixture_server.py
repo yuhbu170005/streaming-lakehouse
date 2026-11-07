@@ -140,19 +140,23 @@ class Market:
         )
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8777)
-    args = parser.parse_args()
-    market = Market()
+def app_for(market):
     app = web.Application()
     app.add_routes(
         [
             web.get("/stream", market.websocket),
             web.get("/api/v3/aggTrades", market.rest),
+            web.get("/api/v3/klines", market.rest_klines),
         ]
     )
-    web.run_app(app, port=args.port)
+    return app
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8777)
+    args = parser.parse_args()
+    web.run_app(app_for(Market()), port=args.port)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,22 @@
+# Separate live benchmark project. It reuses the production Bronze/Silver path.
+services:
+  redpanda:
+    command: !override
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=768M
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:39092
+      - --schema-registry-addr=0.0.0.0:8081
+    ports: !override ["127.0.0.1:39092:19092", "127.0.0.1:38081:8081"]
+
+  producer:
+    ports: !override ["127.0.0.1:39108:9108"]
+
+  minio:
+    ports: !reset []
+
+  trino:
+    ports: !override ["127.0.0.1:38080:8080"]

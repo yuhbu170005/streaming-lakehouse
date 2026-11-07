@@ -236,3 +236,33 @@ def kafka_trade_ids(producer_id):
     finally:
         consumer.close()
     return ids
+
+
+def test_reference_fixture_matches_closed_market_minute(tmp_path, monkeypatch):
+    from producer.contracts import now_ms
+    from producer.fixture_server import Market, app_for
+
+    monkeypatch.setenv("FIXTURE_STATE", str(tmp_path / "fixture-epoch"))
+    market = Market()
+    minute = (now_ms() // 60_000 - 2) * 60_000
+    market.started = minute
+
+    async def verify():
+        runner = web.AppRunner(app_for(market))
+        await runner.setup()
+        try:
+            site = web.TCPSite(runner, "127.0.0.1", 0)
+            await site.start()
+            _, port = runner.addresses[0]
+            async with aiohttp.ClientSession() as http:
+                async with http.get(
+                    f"http://127.0.0.1:{port}/api/v3/klines",
+                    params={"symbol": "DEMOUSDT", "startTime": minute},
+                ) as response:
+                    response.raise_for_status()
+                    candle = (await response.json())[0]
+            assert (candle[0], candle[5], candle[8]) == (minute, "75.000", 1200)
+        finally:
+            await runner.cleanup()
+
+    asyncio.run(verify())

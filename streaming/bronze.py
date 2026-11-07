@@ -49,6 +49,7 @@ def start(spark):
     return (
         writer(frame, "bronze")
         .format("iceberg")
+        .option("fanout-enabled", "true")
         .outputMode("append")
         .toTable("lake.bronze.aggtrade_raw")
     )

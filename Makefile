@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 COMPOSE = docker compose --profile core --profile query --profile obs
-DEMO = docker compose -p streaming-lakehouse-demo -f docker-compose.yml -f compose.demo.yml --profile core --profile query
+DEMO = docker compose -p streaming-lakehouse-demo -f docker-compose.yml -f compose.demo.yml --profile core --profile query --profile obs
 
 .PHONY: help sync lint test
 help:
@@ -91,9 +91,25 @@ chaos-spark-kill chaos-broker-restart chaos-producer-cut chaos-minio-restart cha
 LOAD_SECONDS ?= 1800
 WARMUP_SECONDS ?= 60
 BENCHMARK_SECONDS ?= 1800
+BENCHMARK_OUTPUT ?= data/benchmark-live.json
+SETTLE_SECONDS ?= 130
 .PHONY: loadtest benchmark-live
 loadtest:
-	TRINO_PORT=28080 uv run --locked --group operations python -m chaos.benchmark run 		--mode synthetic --project streaming-lakehouse-demo --duration "$(LOAD_SECONDS)" 		--warmup "$(WARMUP_SECONDS)" --output data/benchmark-synthetic.json
+	TRINO_PORT=28080 uv run --locked --group operations python -m chaos.benchmark run 		--mode synthetic --project streaming-lakehouse-demo --duration "$(LOAD_SECONDS)" 		--warmup "$(WARMUP_SECONDS)" --settle "$(SETTLE_SECONDS)" --output data/benchmark-synthetic.json
 
 benchmark-live:
-	uv run --locked --group operations python -m chaos.benchmark run 		--mode live --project streaming-lakehouse --duration "$(BENCHMARK_SECONDS)" 		--warmup "$(WARMUP_SECONDS)" --output data/benchmark-live.json
+	uv run --locked --group operations python -m chaos.benchmark run 		--mode live --project streaming-lakehouse --duration "$(BENCHMARK_SECONDS)" 		--warmup "$(WARMUP_SECONDS)" --settle "$(SETTLE_SECONDS)" --output "$(BENCHMARK_OUTPUT)"
+
+.PHONY: benchmark-compaction
+benchmark-compaction:
+	TRINO_PORT=28080 uv run --locked --group operations python -m chaos.benchmark compact --output data/benchmark-compaction.json
+
+.PHONY: benchmark-silver
+benchmark-silver:
+	$(DEMO) build bootstrap
+	$(DEMO) run --rm --no-deps bootstrap benchmark-silver
+
+SCALE_SYMBOLS ?= 100
+.PHONY: benchmark-scale
+benchmark-scale: build-core
+	sh scripts/benchmark_scale.sh "$(SCALE_SYMBOLS)" "$(BENCHMARK_SECONDS)"

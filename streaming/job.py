@@ -1,6 +1,6 @@
 import sys
 
-from streaming import bronze, gold, reference, silver, tables
+from streaming import benchmark, bronze, gold, reference, silver, tables
 from streaming.common import session
 from streaming.metrics import Metrics
 
@@ -9,6 +9,10 @@ def main(job):
     spark = session(job)
     if job == "bootstrap":
         tables.create(spark)
+        spark.stop()
+        return
+    if job == "benchmark-silver":
+        benchmark.run(spark)
         spark.stop()
         return
     starters = {

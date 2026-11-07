@@ -1,12 +1,14 @@
 from dagster import (
     AssetCheckResult,
     AssetKey,
+    AssetSelection,
     AssetSpec,
     DefaultScheduleStatus,
     Definitions,
     RetryPolicy,
     ScheduleDefinition,
     asset_check,
+    define_asset_job,
     job,
     op,
 )
@@ -81,11 +83,28 @@ def lineage_and_candles():
     return AssetCheckResult(passed=not any(results.values()), metadata=results)
 
 
+data_quality = define_asset_job(
+    "data_quality", selection=AssetSelection.checks(lineage_and_candles)
+)
+
+
 defs = Definitions(
     assets=[AssetSpec("silver_aggtrade")],
-    jobs=[reconciliation, iceberg_maintenance, iceberg_daily, dbt_marts, gap_backfill],
+    jobs=[
+        reconciliation,
+        iceberg_maintenance,
+        iceberg_daily,
+        dbt_marts,
+        gap_backfill,
+        data_quality,
+    ],
     asset_checks=[lineage_and_candles],
     schedules=[
+        ScheduleDefinition(
+            job=data_quality,
+            cron_schedule="*/15 * * * *",
+            default_status=DefaultScheduleStatus.RUNNING,
+        ),
         ScheduleDefinition(
             job=reconciliation,
             cron_schedule="*/5 * * * *",

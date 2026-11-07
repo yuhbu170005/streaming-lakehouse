@@ -35,11 +35,12 @@ DASHBOARDS = {
     ],
     "Symbol drill-down": [
         (
-            "BTCUSDT one-minute close",
+            "One-minute close",
             "line",
             """
             SELECT window_start, close
-            FROM lake.marts.stg_candles WHERE symbol = 'BTCUSDT'
+            FROM lake.marts.stg_candles
+            WHERE symbol = coalesce([[{{symbol}},]] CAST(NULL AS VARCHAR), 'BTCUSDT')
             AND window_start >= current_timestamp - INTERVAL '6' HOUR ORDER BY window_start
             """,
         ),
@@ -48,7 +49,9 @@ DASHBOARDS = {
             "table",
             """
             SELECT symbol, hour_start, open, high, low, close, volume, trade_count
-            FROM lake.marts.mart_symbol_hourly ORDER BY hour_start DESC, symbol LIMIT 200
+            FROM lake.marts.mart_symbol_hourly
+            WHERE symbol = coalesce([[{{symbol}},]] CAST(NULL AS VARCHAR), 'BTCUSDT')
+            ORDER BY hour_start DESC LIMIT 200
             """,
         ),
     ],
@@ -179,32 +182,100 @@ def main():
             for dashcard in dashboard.get("dashcards", [])
             if dashcard.get("card")
         }
+        filter_symbol = name == "Symbol drill-down"
         for title, display, sql in specs:
             card = cards.get(title)
-            if card is None:
-                card = request(
-                    "POST",
-                    "card",
-                    {
-                        "name": title,
-                        "display": display,
-                        "visualization_settings": {},
-                        "dashboard_id": dashboard_id,
-                        "dataset_query": {
-                            "database": database["id"],
-                            "type": "native",
-                            "native": {"query": sql.strip(), "template-tags": {}},
-                        },
+            payload = {
+                "name": title,
+                "display": display,
+                "visualization_settings": {},
+                "dashboard_id": dashboard_id,
+                "dataset_query": {
+                    "database": database["id"],
+                    "type": "native",
+                    "native": {
+                        "query": sql.strip(),
+                        "template-tags": {
+                            "symbol": {
+                                "name": "symbol",
+                                "display-name": "Symbol",
+                                "id": "symbol",
+                                "type": "text",
+                            }
+                        }
+                        if filter_symbol
+                        else {},
                     },
-                    session,
-                )
-            result = request("POST", f"card/{card['id']}/query", {}, session)
+                },
+            }
+            if card is None:
+                card = request("POST", "card", payload, session)
+            elif filter_symbol:
+                card = request("PUT", f"card/{card['id']}", payload, session)
+            params = (
+                {
+                    "parameters": [
+                        {
+                            "type": "category",
+                            "id": "symbol",
+                            "target": ["variable", ["template-tag", "symbol"]],
+                            "value": "ETHUSDT",
+                        }
+                    ],
+                }
+                if filter_symbol
+                else {}
+            )
+            result = request("POST", f"card/{card['id']}/query", params, session)
             if result.get("status") != "completed":
                 raise RuntimeError(
                     f"Dashboard card query failed: {title}: {result.get('error')}"
                 )
             print(f"{title}: {result.get('row_count')} rows")
+        if filter_symbol:
+            add_symbol_filter(dashboard_id, {title for title, _, _ in specs}, session)
         print(f"{name}: {BASE}/dashboard/{dashboard_id}")
+
+
+def add_symbol_filter(dashboard_id, managed_cards, session):
+    dashboard = request("GET", f"dashboard/{dashboard_id}", session=session)
+    parameter = {
+        "id": "symbol",
+        "name": "Symbol",
+        "slug": "symbol",
+        "type": "string/=",
+        "sectionId": "string",
+        "isMultiSelect": False,
+        "default": ["BTCUSDT"],
+    }
+    parameters = [p for p in dashboard["parameters"] if p["id"] != "symbol"] + [
+        parameter
+    ]
+    dashcards = []
+    for dashcard in dashboard["dashcards"]:
+        card = dashcard.get("card") or {}
+        mappings = [
+            p for p in dashcard["parameter_mappings"] if p["parameter_id"] != "symbol"
+        ]
+        if card.get("name") in managed_cards:
+            mappings.append(
+                {
+                    "parameter_id": "symbol",
+                    "card_id": card["id"],
+                    "target": ["variable", ["template-tag", "symbol"]],
+                }
+            )
+        layout = {
+            key: dashcard[key]
+            for key in ("id", "card_id", "row", "col", "size_x", "size_y")
+        }
+        dashcards.append({**layout, "parameter_mappings": mappings})
+    request(
+        "PUT",
+        f"dashboard/{dashboard_id}",
+        {"parameters": parameters, "dashcards": dashcards},
+        session,
+    )
 
 
 if __name__ == "__main__":

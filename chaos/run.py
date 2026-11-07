@@ -137,31 +137,54 @@ def producer_cut():
             "docker", "network", "connect", "--alias", "producer", network, producer
         )
     restored = time.monotonic()
-    gap = eventually(
-        lambda: (
-            rows[0]
-            if (
-                rows := execute(
-                    "SELECT from_id, to_id FROM lake.ops.gap_events "
-                    f"WHERE symbol = '{SYMBOL}' AND from_id > {before} "
-                    "AND backfilled_at IS NOT NULL ORDER BY from_id DESC LIMIT 1"
-                )
-            )
-            else None
-        ),
-        timeout=300,
+    upper = int(
+        compose(
+            "exec",
+            "-T",
+            "fixture",
+            "python",
+            "-c",
+            "from producer.fixture_server import Market; print(Market().head())",
+            capture=True,
+        )
     )
-    eventually(
-        lambda: check_range(*gap), timeout=max(1, 300 - (time.monotonic() - restored))
-    )
+    assert upper - before >= 1100, (before, upper)
+    eventually(lambda: check_range(before, upper), timeout=300)
     elapsed = time.monotonic() - restored
     assert elapsed <= 300
-    print(f"Backfilled {gap[0]}..{gap[1]} into Silver in {elapsed:.2f}s", flush=True)
-    repair_started = time.monotonic()
-    repair()
-    sql_file("reconciliation")
+    gap_count, recovered_ids = execute(
+        "SELECT count(*), coalesce(sum(to_id - from_id + 1), 0) FROM lake.ops.gap_events "
+        f"WHERE symbol = '{SYMBOL}' AND from_id <= {upper} AND to_id >= {before} "
+        "AND backfilled_at IS NOT NULL"
+    )[0]
+    assert gap_count and recovered_ids >= 1000, (gap_count, recovered_ids)
     print(
-        f"Repair and reconciliation SQL took {time.monotonic() - repair_started:.2f}s",
+        f"Silver range [{before}, {upper}] complete in {elapsed:.2f}s after network restore; "
+        f"{gap_count} recovered gaps covered {recovered_ids} IDs",
+        flush=True,
+    )
+    repair_started = time.monotonic()
+
+    def candles_repaired():
+        repair()
+        sql_file("reconciliation")
+        count = execute(
+            "WITH affected AS ("
+            "SELECT DISTINCT symbol, date_trunc('minute', trade_time) AS window_start "
+            "FROM lake.silver.aggtrade "
+            f"WHERE symbol = '{SYMBOL}' AND agg_trade_id BETWEEN {before} AND {upper} "
+            "AND is_backfill) "
+            "SELECT count(*) FROM affected a "
+            "JOIN lake.gold.candles_1m g ON a.symbol=g.symbol AND a.window_start=g.window_start "
+            "JOIN lake.recon.candle_vs_kline r ON a.symbol=r.symbol AND a.window_start=r.window_start "
+            "WHERE g.repaired AND r.status = 'match'"
+        )[0][0]
+        return count
+
+    matched = eventually(candles_repaired, timeout=180)
+    print(
+        f"Repaired and reconciled {matched} closed outage candles in "
+        f"{time.monotonic() - repair_started:.2f}s after Silver recovery",
         flush=True,
     )
 
@@ -190,8 +213,25 @@ def poison():
     print("Malformed Avro reached Kafka DLQ and Iceberg DQ table", flush=True)
 
 
+def gold_late_count():
+    metrics = compose(
+        "exec",
+        "-T",
+        "gold",
+        "python3",
+        "-c",
+        "import urllib.request;print(urllib.request.urlopen('http://localhost:9110/metrics').read().decode())",
+        capture=True,
+    )
+    return sum(
+        float(line.split()[-1])
+        for line in metrics.splitlines()
+        if line.startswith("spark_late_events_total")
+    )
+
+
 def late_data():
-    # Use an isolated symbol so the injected trade cannot corrupt the demo ID sequence.
+    # This symbol has no fixture trades, so synthetic late records form their own ID sequence.
     late_symbol = "LATEUSDT"
     minute_ms = (now_ms() // 60_000 - 3) * 60_000
     target = (
@@ -200,11 +240,15 @@ def late_data():
     before = execute(
         f"SELECT volume, trade_count FROM lake.gold.candles_1m WHERE {target}"
     )
+    watermark_drops_before = gold_late_count()
+    trade_id = execute(
+        f"SELECT coalesce(max(agg_trade_id), 0) + 1 FROM lake.silver.aggtrade WHERE symbol='{late_symbol}'"
+    )[0][0]
     event = {
         "e": "aggTrade",
         "E": minute_ms + 1000,
         "s": late_symbol,
-        "a": 1,
+        "a": trade_id,
         "p": "100",
         "q": "0.125",
         "f": 1,
@@ -219,26 +263,13 @@ def late_data():
     asyncio.run(publish_raw(event))
     eventually(
         lambda: execute(
-            f"SELECT count(*) FROM lake.silver.aggtrade WHERE symbol = '{late_symbol}' AND agg_trade_id = {event['a']}"
+            f"SELECT count(*) FROM lake.silver.aggtrade WHERE symbol = '{late_symbol}' AND agg_trade_id = {trade_id}"
         )[0][0]
     )
-    time.sleep(25)
+    eventually(lambda: gold_late_count() > watermark_drops_before, timeout=120)
     assert (
         execute(f"SELECT volume, trade_count FROM lake.gold.candles_1m WHERE {target}")
         == before
-    )
-    metrics = compose(
-        "exec",
-        "-T",
-        "gold",
-        "python3",
-        "-c",
-        "import urllib.request;print(urllib.request.urlopen('http://localhost:9110/metrics').read().decode())",
-        capture=True,
-    )
-    assert any(
-        line.startswith("spark_late_events_total") and float(line.split()[-1]) > 0
-        for line in metrics.splitlines()
     )
     print(
         "Late record persisted in Silver, Gold stayed unchanged, watermark metric incremented"
