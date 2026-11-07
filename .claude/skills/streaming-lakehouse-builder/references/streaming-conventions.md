@@ -17,7 +17,7 @@
 - One checkpoint location per query on MinIO; never share or delete casually (deleting = reprocess/duplicate risk).
 - Bronze is append-only; keep raw strings and Kafka metadata for audit/replay.
 - Silver/gold writes use `foreachBatch` + Iceberg `MERGE INTO` keyed by the business key, so replayed batches are idempotent. Document the at-least-once → exactly-once-effect reasoning.
-- Event time = `trade_time`; watermark 30 s on gold windows; late events are not applied to gold, stay in silver, and increment `late_events_total`.
+- Event time = `trade_time`; watermark 30 s on gold windows; late events are not applied to gold, stay in Silver, and increment `late_events_total`. After gap backfill, a batch recomputes affected closed candles from Silver and runs reconciliation again.
 - Set `maxOffsetsPerTrigger`, trigger interval 5–10 s, small `spark.sql.shuffle.partitions` (local); explain each non-default setting in the learning log.
 - Expose progress through a `StreamingQueryListener` exporter (input/processed rate, batch duration, rows, late/dlq counts).
 - Avoid unbounded state: no `dropDuplicates` without a watermark; prefer MERGE for dedupe.
@@ -32,4 +32,4 @@
 - No duplicates: `count(*) = count(distinct symbol, agg_trade_id)` in silver.
 - No gaps: per symbol within a range, `count(distinct id) = max(id) - min(id) + 1` (excluding ranges listed as open gaps in `ops.gap_events`).
 - Lineage containment: valid bronze keys ⊆ silver keys; silver keys ⊆ bronze keys.
-- Candle consistency: candle volume/trade_count equal aggregates over silver in the same window; reconciliation vs official klines for closed candles.
+- Candle consistency: candle volume/trade_count equal aggregates over Silver in eligible closed windows after any required repair. Reconcile against official klines and report open gaps or pending repairs separately.
