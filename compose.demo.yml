@@ -1,0 +1,47 @@
+# Dedicated synthetic broker, catalog, checkpoints and warehouse volumes.
+services:
+  redpanda:
+    command: !override
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=768M
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:29092
+      - --schema-registry-addr=0.0.0.0:8081
+    ports: !override ["127.0.0.1:29092:19092", "127.0.0.1:28081:8081"]
+
+  fixture:
+    image: streaming-lakehouse-producer:local
+    pull_policy: never
+    command: ["python", "-m", "producer.fixture_server"]
+    volumes: [fixture-state:/app/data]
+    mem_limit: 192m
+    profiles: [core]
+
+  producer:
+    environment:
+      SYMBOLS_FILE: /app/config/fixture-symbols.yaml
+      BINANCE_WS_URL: http://fixture:8777
+      BINANCE_REST_URL: http://fixture:8777
+    depends_on:
+      fixture:
+        condition: service_started
+    volumes: !override
+      - producer-state:/app/data
+      - ${DEMO_SYMBOLS_FILE:-./config/symbols.demo.yaml}:/app/config/fixture-symbols.yaml:ro
+    ports: !override ["127.0.0.1:29108:9108"]
+
+  minio:
+    ports: !reset []
+
+  silver:
+    volumes: !override
+      - ${DEMO_SYMBOLS_FILE:-./config/symbols.demo.yaml}:/app/config/symbols.yaml:ro
+
+  trino:
+    ports: !override ["127.0.0.1:28080:8080"]
+
+volumes:
+  fixture-state:

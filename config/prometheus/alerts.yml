@@ -1,0 +1,23 @@
+groups:
+  - name: lakehouse
+    rules:
+      - alert: LakehouseNoTradeData
+        expr: (sum(rate(producer_messages_total{topic="binance.aggtrade.raw.v1"}[2m])) or vector(0)) == 0
+        for: 2m
+        annotations:
+          summary: No acknowledged Spot trade events in the last two minutes
+      - alert: LakehouseKafkaLag
+        expr: spark_kafka_offset_lag > 30000
+        for: 2m
+        annotations:
+          summary: A Spark Kafka source is falling behind
+      - alert: LakehouseUnresolvedGap
+        expr: lakehouse_oldest_open_gap_seconds > 300 or producer_open_gaps > 0
+        for: 5m
+        annotations:
+          summary: An aggregate trade ID range remains open
+      - alert: LakehouseCandleMismatch
+        expr: lakehouse_reconciliation_candles{status="mismatch"} > 0
+        for: 1m
+        annotations:
+          summary: One or more recent closed candles differ from Binance

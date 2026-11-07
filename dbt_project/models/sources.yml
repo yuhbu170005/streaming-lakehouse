@@ -1,0 +1,28 @@
+version: 2
+sources:
+  - name: gold
+    database: lake
+    schema: gold
+    tables:
+      - name: candles_1m
+        config:
+          loaded_at_field: updated_at
+          freshness:
+            warn_after: {count: 5, period: minute}
+            error_after: {count: 15, period: minute}
+  - name: silver
+    database: lake
+    schema: silver
+    tables:
+      - name: aggtrade
+  - name: ops
+    database: lake
+    schema: ops
+    tables:
+      - name: gap_events
+      - name: dq_results
+  - name: recon
+    database: lake
+    schema: recon
+    tables:
+      - name: candle_vs_kline

@@ -11,3 +11,8 @@ data/
 checkpoints/
 target/
 logs/
+
+.opencode/
+
+.user.yml
+.tmp_dagster_home_*/

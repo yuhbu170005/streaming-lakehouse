@@ -3,13 +3,27 @@ name = "streaming-lakehouse"
 version = "0.1.0"
 description = "Local streaming lakehouse for public Binance Spot market data"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "aiohttp==3.14.5",
+    "boto3==1.43.118",
+    "confluent-kafka==2.16.0",
+    "fastavro==1.13.1",
+    "prometheus-client==0.26.0",
+    "pyyaml==6.0.3",
+]
 
 [dependency-groups]
 dev = [
     "pre-commit==4.7.0",
     "pytest==9.1.1",
     "ruff==0.17.2",
+]
+
+operations = [
+    "dagster==1.13.26",
+    "dagster-postgres==0.29.26",
+    "dagster-webserver==1.13.26",
+    "dbt-trino==1.10.6",
 ]
 
 [tool.ruff]
@@ -20,3 +34,4 @@ select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

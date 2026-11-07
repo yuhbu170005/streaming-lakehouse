@@ -1,6 +1,6 @@
 # PLAN — Real-time Crypto Streaming Lakehouse
 
-One phase at a time. At the end of each phase: run the **Accept** commands, update `docs/LEARNING_LOG.md` and `docs/FAILURE_MODES.md`, commit, report, wait for the owner's go-ahead.
+Phases define implementation order. Run the **Accept** commands and update `docs/LEARNING_LOG.md` and `docs/FAILURE_MODES.md` as evidence becomes available. The owner requested continuous implementation through all phases.
 Estimated 5–6 weeks part-time. Tasks marked **(owner)** are core-logic modules the owner implements in *learning mode* (see SKILL.md): the agent provides a skeleton, tests and review.
 
 ## Phase 0 — Foundation (0.5–1 day)

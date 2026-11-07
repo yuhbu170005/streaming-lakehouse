@@ -1,0 +1,139 @@
+{
+  "uid": "latency-throughput",
+  "title": "Latency and throughput",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "End-to-end latency p50 / p95 / p99 (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "lakehouse_e2e_latency_ms",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Spark input rows/s",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "spark_input_rows_per_sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Spark processed rows/s",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "spark_processed_rows_per_sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Spark micro-batch duration (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "spark_batch_duration_ms",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Gold state rows",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "spark_state_rows",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Iceberg data files",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "lakehouse_iceberg_files",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

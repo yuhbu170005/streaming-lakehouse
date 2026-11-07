@@ -17,3 +17,17 @@ Select and pin service images when they enter Compose. The Apache REST fixture p
 ## Binance source contract
 
 The official Spot docs list the public market-data WebSocket base, combined-stream envelopes, a maximum of 1,024 streams per connection, and a limit of five client control messages per second. They document the 24-hour connection lifetime and the `serverShutdown` event. REST `GET /api/v3/aggTrades` on the market-data host accepts an inclusive `fromId`. Phase 1 validates reconnect and gap assumptions against fixtures and the live source. [WebSocket streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md) · [REST API](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#compressedaggregate-trades-list)
+
+## Runtime deployment pins
+
+| Component | Version | Notes |
+|---|---|---|
+| Redpanda | 26.2.2 | Kafka and Schema Registry on one local node. |
+| Producer clients | aiohttp 3.14.5, confluent-kafka 2.16.0, fastavro 1.13.1 | Locked in uv. |
+| Iceberg REST | Apache fixture 1.10.1, PostgreSQL JDBC 42.7.10 | Published fixture tag; Postgres backs the catalog. |
+| Spark checkpoint I/O | Hadoop AWS 3.4.2 and AWS SDK bundle 2.29.52 | Matches the Spark 4.1.3 Hadoop distribution. |
+| MinIO | RELEASE.2025-10-15T17-29-55Z | Builds the pinned community source with Go 1.24.13. Public prebuilt image pulls were unavailable in the test environment. |
+| PostgreSQL | 16.11 | Independent databases for catalog, Dagster, and Metabase. |
+| Dagster / dbt | Dagster 1.13.26, dbt-trino 1.10.6 | Locked in uv and installed in the operations image. |
+| Prometheus / Grafana | 3.10.0 / 12.4.1 | Local metrics, alert evaluation, and dashboards. |
+| Metabase | 0.57.3 | Built-in Starburst driver reads Trino. |

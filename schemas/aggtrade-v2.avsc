@@ -1,0 +1,71 @@
+{
+  "type": "record",
+  "name": "AggTrade",
+  "namespace": "lakehouse.binance",
+  "fields": [
+    {
+      "name": "E",
+      "type": "long"
+    },
+    {
+      "name": "a",
+      "type": "long"
+    },
+    {
+      "name": "f",
+      "type": "long"
+    },
+    {
+      "name": "l",
+      "type": "long"
+    },
+    {
+      "name": "T",
+      "type": "long"
+    },
+    {
+      "name": "ingest_ts",
+      "type": "long"
+    },
+    {
+      "name": "e",
+      "type": "string"
+    },
+    {
+      "name": "s",
+      "type": "string"
+    },
+    {
+      "name": "p",
+      "type": "string"
+    },
+    {
+      "name": "q",
+      "type": "string"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "conn_id",
+      "type": "string"
+    },
+    {
+      "name": "m",
+      "type": "boolean"
+    },
+    {
+      "name": "is_backfill",
+      "type": "boolean"
+    },
+    {
+      "name": "source_region",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  ]
+}

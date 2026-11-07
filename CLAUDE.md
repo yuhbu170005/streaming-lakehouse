@@ -4,7 +4,7 @@ Portfolio project #2 for a Data Engineer internship applicant (project #1 was a 
 
 ## Read first (in order)
 1. `docs/SPEC.md` — what to build. Source of truth.
-2. `docs/PLAN.md` — phases, tasks, acceptance criteria. One phase at a time.
+2. `docs/PLAN.md` — implementation order, tasks, and acceptance criteria.
 3. `.claude/skills/streaming-lakehouse-builder/SKILL.md` — how to work.
 
 ## Non-negotiables
@@ -13,7 +13,7 @@ Portfolio project #2 for a Data Engineer internship applicant (project #1 was a 
 - Public market data only. No API keys, no trading logic, no user-data streams. Respect Binance limits and terms; README includes a "not financial advice / public data only" note.
 - Runs locally via Docker Compose on a 24 GB laptop; every service has a memory limit. No paid cloud.
 - No secrets in git. `.env.example` documents all variables.
-- Stop at the end of each phase, report evidence (commands + output summary), wait for the owner's go-ahead.
+- Follow phase order and record measured acceptance evidence as work progresses. The owner authorized continuous implementation, including the core logic originally marked owner.
 - The owner is learning: explain decisions in Vietnamese in chat; code, comments, docs, commits in English. Log them in `docs/LEARNING_LOG.md`.
 
 ## Stack (pin versions; verify the current stable release and compatibility matrix first)

@@ -1,0 +1,147 @@
+{
+  "uid": "data-quality",
+  "title": "Data quality",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Gap ranges and oldest open range (seconds)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "producer_open_gaps",
+          "refId": "A"
+        },
+        {
+          "expr": "lakehouse_oldest_open_gap_seconds",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Late trades dropped by Gold",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "increase(spark_late_events_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "DLQ events (producer and Silver)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "increase(producer_messages_total{topic=\"binance.aggtrade.dlq.v1\"}[5m])",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(lakehouse_silver_rejections_total[5m])",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Reconciliation match rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "lakehouse_reconciliation_match_rate",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Reconciliation statuses",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "lakehouse_reconciliation_candles",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Detected gaps",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "lakehouse-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "increase(producer_gaps_detected_total[5m])",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

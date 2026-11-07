@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: stg_candles
+    columns:
+      - name: candle_key
+        data_tests: [not_null, unique]
+  - name: mart_symbol_hourly
+    columns:
+      - name: hourly_key
+        data_tests: [not_null, unique]
+  - name: mart_market_overview
+    columns:
+      - name: hourly_key
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('mart_symbol_hourly')
+                field: hourly_key
+  - name: mart_data_health
+    columns:
+      - name: health_key
+        data_tests: [not_null, unique]

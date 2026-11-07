@@ -1,2 +1,274 @@
-# Service definitions start in Phase 1.
-services: {}
+name: streaming-lakehouse
+
+x-s3-env: &s3-env
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-lakehouse}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-lakehouse-local-only}
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+
+x-stream: &stream
+  image: streaming-lakehouse-spark:4.1.3
+  pull_policy: never
+  environment:
+    <<: *s3-env
+    SPARK_TRIGGER: ${SPARK_TRIGGER:-10 seconds}
+    MAX_OFFSETS_PER_TRIGGER: ${MAX_OFFSETS_PER_TRIGGER:-30000}
+  volumes:
+    - ${SYMBOLS_FILE:-./config/symbols.yaml}:/app/config/symbols.yaml:ro
+  depends_on:
+    bootstrap:
+      condition: service_completed_successfully
+  mem_limit: 1800m
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9110/health', timeout=2)"]
+    interval: 10s
+    timeout: 4s
+    retries: 12
+  profiles: [core]
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.2.2
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr=0.0.0.0:8081
+    ports: ["127.0.0.1:19092:19092", "127.0.0.1:8081:8081"]
+    volumes:
+      - broker:/var/lib/redpanda/data
+      - ./scripts/topics.sh:/opt/lakehouse/topics.sh:ro
+    mem_limit: 1500m
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info", "-X", "brokers=localhost:9092"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+    profiles: [core]
+
+  producer:
+    image: streaming-lakehouse-producer:local
+    build:
+      context: .
+      dockerfile: producer/Dockerfile
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      SCHEMA_REGISTRY_URL: http://redpanda:8081
+      BINANCE_WS_URL: ${BINANCE_WS_URL:-wss://data-stream.binance.vision}
+      BINANCE_REST_URL: ${BINANCE_REST_URL:-https://data-api.binance.vision}
+      AGGTRADE_SCHEMA_VERSION: ${AGGTRADE_SCHEMA_VERSION:-1}
+    volumes:
+      - producer-state:/app/data
+      - ${SYMBOLS_FILE:-./config/symbols.yaml}:/app/config/symbols.yaml:ro
+    ports: ["127.0.0.1:9108:9108"]
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9108/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+    profiles: [core]
+
+  minio:
+    image: streaming-lakehouse-minio:local
+    build:
+      context: .
+      dockerfile: config/minio/Dockerfile
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-lakehouse}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-lakehouse-local-only}
+    ports: ["127.0.0.1:9001:9001"]
+    volumes: [objects:/data]
+    mem_limit: 768m
+    profiles: [core]
+
+  bucket:
+    image: streaming-lakehouse-producer:local
+    pull_policy: never
+    command: ["python", "-m", "producer.bucket"]
+    environment: *s3-env
+    depends_on:
+      minio:
+        condition: service_started
+    mem_limit: 192m
+    profiles: [core]
+
+  postgres:
+    image: postgres:16.11
+    environment:
+      POSTGRES_USER: lakehouse
+      POSTGRES_DB: iceberg
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/lakehouse.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "lakehouse", "-d", "iceberg"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+    mem_limit: 384m
+    profiles: [core]
+
+  catalog:
+    build:
+      context: .
+      dockerfile: config/catalog/Dockerfile
+    environment:
+      <<: *s3-env
+      JAVA_TOOL_OPTIONS: -Xmx256m
+      CATALOG_URI: jdbc:postgresql://postgres:5432/iceberg
+      CATALOG_JDBC_USER: lakehouse
+      CATALOG_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
+      CATALOG_WAREHOUSE: s3://lakehouse/warehouse
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bucket:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8181/v1/config"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+    mem_limit: 640m
+    profiles: [core]
+
+  bootstrap:
+    <<: *stream
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+    command: ["bootstrap"]
+    depends_on:
+      catalog:
+        condition: service_healthy
+    restart: "no"
+    healthcheck:
+      disable: true
+
+  bronze:
+    <<: *stream
+    command: ["bronze"]
+
+  silver:
+    <<: *stream
+    command: ["silver"]
+
+  gold:
+    <<: *stream
+    command: ["gold"]
+
+  reference:
+    <<: *stream
+    command: ["reference"]
+
+  trino:
+    image: trinodb/trino:484
+    environment: *s3-env
+    volumes:
+      - ./config/trino/config.properties:/etc/trino/config.properties:ro
+      - ./config/trino/node.properties:/etc/trino/node.properties:ro
+      - ./config/trino/jvm.config:/etc/trino/jvm.config:ro
+      - ./config/trino/catalog:/etc/trino/catalog:ro
+    depends_on:
+      catalog:
+        condition: service_healthy
+    ports: ["127.0.0.1:${TRINO_HOST_PORT:-18080}:8080"]
+    mem_limit: 2g
+    restart: unless-stopped
+    profiles: [query]
+
+  dagster:
+    image: streaming-lakehouse-operations:local
+    build:
+      context: .
+      dockerfile: orchestration/Dockerfile
+    depends_on:
+      trino:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
+    volumes: [dagster-data:/dagster]
+    ports: ["127.0.0.1:3001:3000"]
+    mem_limit: 1024m
+    profiles: [query]
+
+  metabase:
+    image: metabase/metabase:v0.57.3
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: lakehouse
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
+      MB_DB_HOST: postgres
+      JAVA_OPTS: -Xmx640m
+      MB_ANON_TRACKING_ENABLED: "false"
+    depends_on:
+      trino:
+        condition: service_healthy
+    ports: ["127.0.0.1:3002:3000"]
+    mem_limit: 1200m
+    profiles: [query]
+
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./config/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    mem_limit: 512m
+    profiles: [obs]
+
+  grafana:
+    image: grafana/grafana:12.4.1
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/lakehouse-dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    depends_on:
+      prometheus:
+        condition: service_started
+    ports: ["127.0.0.1:3000:3000"]
+    mem_limit: 512m
+    profiles: [obs]
+
+  warehouse-metrics:
+    image: streaming-lakehouse-operations:local
+    pull_policy: never
+    command: ["python", "-m", "orchestration.exporter"]
+    depends_on:
+      trino:
+        condition: service_healthy
+    mem_limit: 256m
+    profiles: [query]
+
+volumes:
+  broker:
+  producer-state:
+  objects:
+  postgres-data:
+  dagster-data:
+  prometheus-data:
+  grafana-data:

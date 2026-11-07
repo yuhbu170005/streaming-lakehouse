@@ -1,0 +1,8 @@
+name: streaming_lakehouse
+version: '1.0.0'
+profile: streaming_lakehouse
+model-paths: [models]
+test-paths: [tests]
+models:
+  streaming_lakehouse:
+    +materialized: view

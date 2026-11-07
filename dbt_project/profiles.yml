@@ -1,0 +1,12 @@
+streaming_lakehouse:
+  target: local
+  outputs:
+    local:
+      type: trino
+      method: none
+      host: "{{ env_var('TRINO_HOST', '127.0.0.1') }}"
+      port: '{{ env_var("TRINO_PORT", "18080") | int }}'
+      user: lakehouse
+      database: lake
+      schema: marts
+      threads: 2
