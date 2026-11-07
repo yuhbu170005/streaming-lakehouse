@@ -48,3 +48,45 @@ The isolated Spark `MERGE` benchmark used four inserts per batch size and exclud
 The first sustained measurements were interrupted when the host entered idle sleep at 02:27 on 2026-11-08. Those runs produced no accepted measurements. The harness now writes progress files and invalidates sampling gaps longer than two minutes. On macOS, `caffeinate -is make acceptance-live` holds power assertions for the duration of the acceptance command.
 
 The isolated demo also observed the no-data alert firing 235.51 seconds after its producer stopped. The daily maintenance procedures completed against the demo warehouse. Silver continued to consume new appends after Bronze compaction.
+
+### Sustained Binance run
+
+The 20-symbol baseline ran from 03:35:42 to 04:05:44 Asia/Ho_Chi_Minh on 2026-11-08. The 120-second warm-up was excluded. The 100-symbol scale test ran concurrently for part of this baseline, and the pipeline recovered 87 trades during the measurement.
+
+| Symbols observed | Duration | Silver trades | Trades/s | p50 / p95 / p99 latency | Comparable candles |
+|---|---:|---:|---:|---:|---|
+| 20 | 1,801.76 s | 34,928 | 19.39 | 16,595 / 67,951 / 128,169 ms | 598 matches, 0 mismatches |
+
+Two official no-trade candles were recorded separately. There were zero missing inputs in this window. The benchmark started at `85fed7e` and includes a checkpointed deployment of `73110ce`. Raw samples are in the local `data/benchmark-live-20.json` report.
+
+Peak sampled resource use across the 29 one-minute samples is shown below. CPU is Docker's per-container CPU percentage and can exceed 100% on multiple cores.
+
+| Service | CPU | RAM (MiB) |
+|---|---:|---:|
+| bronze | 152.0% | 1246 |
+| catalog | 19.0% | 214 |
+| dagster | 96.8% | 736 |
+| gold | 172.0% | 1594 |
+| grafana | 43.9% | 202 |
+| metabase | 12.9% | 785 |
+| minio | 70.7% | 394 |
+| postgres | 28.1% | 67 |
+| producer | 23.1% | 40 |
+| prometheus | 13.0% | 81 |
+| redpanda | 16.6% | 112 |
+| reference | 116.7% | 1474 |
+| scale-100-bronze | 129.5% | 1321 |
+| scale-100-catalog | 24.1% | 177 |
+| scale-100-minio | 58.6% | 324 |
+| scale-100-postgres | 8.9% | 39 |
+| scale-100-producer | 28.5% | 40 |
+| scale-100-redpanda | 20.6% | 212 |
+| scale-100-silver | 192.0% | 1563 |
+| scale-100-trino | 22.1% | 1010 |
+| silver | 309.4% | 1695 |
+| trino | 509.5% | 2189 |
+| warehouse-metrics | 17.1% | 35 |
+
+### Backlog recovery sample
+
+An earlier live 100-symbol run started measuring just after the host woke. It wrote 142,789 Silver rows in 1,801.91 seconds (79.24 rows/s), including 56,262 backfilled rows. The p50/p95/p99 event-time latency was 29,055 / 2,312,826 / 3,013,062 ms. This run measured catch-up from accumulated source history. The report is retained locally as `data/benchmark-scale-100-recovery.json`.
