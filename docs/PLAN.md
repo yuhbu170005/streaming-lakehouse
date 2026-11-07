@@ -4,10 +4,10 @@ One phase at a time. At the end of each phase: run the **Accept** commands, upda
 Estimated 5–6 weeks part-time. Tasks marked **(owner)** are core-logic modules the owner implements in *learning mode* (see SKILL.md): the agent provides a skeleton, tests and review.
 
 ## Phase 0 — Foundation (0.5–1 day)
-- [ ] Repo layout (SPEC §12), `pyproject.toml` (uv), pre-commit, `.env.example`, Makefile skeleton, CI skeleton (ruff + pytest)
-- [ ] `docs/LEARNING_LOG.md`, `docs/FAILURE_MODES.md` (table: component → failure → effect → mitigation)
-- [ ] Verify current stable versions and the Spark ↔ Iceberg ↔ Trino compatibility matrix; write it to `docs/VERSIONS.md`
-**Accept:** `make lint` green; CI green on push.
+- [x] Repo layout (SPEC §12), `pyproject.toml` (uv), pre-commit, `.env.example`, Makefile skeleton, CI skeleton (ruff + pytest)
+- [x] `docs/LEARNING_LOG.md`, `docs/FAILURE_MODES.md` (table: component → failure → effect → mitigation)
+- [x] Verify current stable versions and the Spark ↔ Iceberg ↔ Trino compatibility matrix; write it to `docs/VERSIONS.md`
+**Accept:** `make lint` green; CI green on push. [Verified GitHub Actions run](https://github.com/yuhbu170005/streaming-lakehouse/actions/runs/42401390782).
 
 ## Phase 1 — Ingest to Kafka (5–6 days)
 - [ ] Compose: Redpanda (+ console optional), Schema Registry check; `make topics` creates topics (SPEC §4)
