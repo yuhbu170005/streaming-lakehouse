@@ -33,7 +33,7 @@ Estimated 5–6 weeks part-time. Tasks marked **(owner)** are core-logic modules
 - [x] `recon.candle_vs_kline` + Dagster/SQL job; report match rate
 - [x] Replay-safe batch repair for closed Gold candles affected by backfill; reconcile after repair
 - [x] Invariant checks (SPEC §9) as pytest + SQL
-**Accept:** ≥ 2 h run with recon mismatches = 0 on closed candles (or every mismatch explained and documented); invariants pass.
+**Accept:** ≥ 2 h run with recon mismatches = 0 on closed candles (or every mismatch explained and documented); invariants pass. The measured run covered all 2,400 symbol-minute slots. See [benchmarks](BENCHMARKS.md).
 
 ## Phase 4 — Query layer & BI (4–5 days)
 - [x] Trino + Iceberg catalog; sample queries file `docs/queries.sql`
@@ -50,7 +50,7 @@ Estimated 5–6 weeks part-time. Tasks marked **(owner)** are core-logic modules
 ## Phase 6 — Chaos & benchmarks (5–6 days)
 - [x] `make chaos-*` scripts for every row in SPEC §9; results with evidence in `docs/CHAOS_RESULTS.md`
 - [x] Verify Silver ID continuity within five minutes after network restoration in the two-minute producer-cut test; time candle repair and re-reconciliation separately
-- [ ] Load tests (`make loadtest`, clearly labelled synthetic) + live runs at 20/100/200 symbols
+- [x] Load tests (`make loadtest`, clearly labelled synthetic) + live runs at 20/100/200 symbols
 - [ ] `docs/BENCHMARKS.md` filled with measured numbers only (SPEC §10)
 - [x] Fix whatever the chaos tests break; update FAILURE_MODES.md
 **Accept:** all chaos tests pass or have documented, justified known limitations; benchmark tables complete.

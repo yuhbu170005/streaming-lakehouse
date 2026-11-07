@@ -103,3 +103,11 @@ The scale projects measured producer-to-Silver throughput and latency independen
 Both runs used `81ba5a8`. The second run completed its measurement but failed the expected-symbol count. The scale command now checks recent trade activity before selecting pairs. The failed coverage report remains in `data/benchmark-scale-200-observed-199.json`.
 
 In the first hour of the primary run, Silver held 64,812 rows and 64,812 distinct trade keys. Reconciliation recorded 1,198 exact matches and two official no-trade candles. Eight scheduled optimization actions recorded 3,379 input files and 19 output files in total across the affected tables.
+
+After recent-trade screening, all 200 configured symbols appeared in Silver. The run used `84037c6`, started at 05:25:29, and ended at 05:55:30 Asia/Ho_Chi_Minh on 2026-11-08.
+
+| Configured / observed symbols | Duration | Silver trades | Trades/s | p50 / p95 / p99 latency | Backfilled |
+|---|---:|---:|---:|---:|---:|
+| 200 / 200 | 1,800.82 s | 60,430 | 33.56 | 18,341 / 83,799 / 100,000 ms | 0 |
+
+The first two hours of the primary run accounted for all 2,400 expected symbol-minute slots. There were 2,376 exact matches, 24 official no-trade candles, and zero missing inputs or mismatches.

@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from decimal import Decimal
+from math import ceil
 from pathlib import Path
 from statistics import median
 from urllib.parse import urlencode
@@ -174,6 +175,10 @@ def measure(args):
                 "GROUP BY 1"
             )
         )
+    expected_candles = None
+    if args.acceptance and args.expected_symbols:
+        minute_slots = ceil(ended.timestamp() / 60) - ceil(started.timestamp() / 60)
+        expected_candles = minute_slots * args.expected_symbols
     report = {
         "mode": args.mode,
         "ingest_only": args.ingest_only,
@@ -191,6 +196,7 @@ def measure(args):
         "latency_ms_p50_p95_p99": latency,
         "backfilled_silver_rows": recovered,
         "reconciliation": statuses,
+        "expected_candle_windows": expected_candles,
         "container_samples": samples,
     }
     save_report(args.output, report)
@@ -214,6 +220,12 @@ def measure(args):
             for status in ("mismatch", "missing_gold", "missing_reference")
         ):
             raise SystemExit(f"Reconciliation acceptance failed: {statuses}")
+        if expected_candles is not None:
+            covered = statuses.get("match", 0) + statuses.get("no_trades", 0)
+            if covered != expected_candles:
+                raise SystemExit(
+                    f"Expected {expected_candles} candle windows, covered {covered}"
+                )
 
 
 def compact(output):

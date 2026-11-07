@@ -201,13 +201,34 @@ services:
     restart: unless-stopped
     profiles: [query]
 
+  dagster-code:
+    image: streaming-lakehouse-operations:local
+    pull_policy: never
+    command: ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-m", "orchestration.definitions"]
+    depends_on:
+      trino:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
+    volumes:
+      - dagster-data:/dagster
+      - ./orchestration/dagster.yaml:/dagster/dagster.yaml:ro
+    healthcheck:
+      test: ["CMD", "dagster", "api", "grpc-health-check", "-p", "4000"]
+      interval: 15s
+      timeout: 8s
+      retries: 12
+    restart: unless-stopped
+    mem_limit: 1024m
+    profiles: [query]
+
   dagster:
     image: streaming-lakehouse-operations:local
     build:
       context: .
       dockerfile: orchestration/Dockerfile
     depends_on:
-      trino:
+      dagster-code:
         condition: service_healthy
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
@@ -221,7 +242,7 @@ services:
       timeout: 4s
       retries: 15
     restart: unless-stopped
-    mem_limit: 1024m
+    mem_limit: 900m
     profiles: [query]
 
   metabase:

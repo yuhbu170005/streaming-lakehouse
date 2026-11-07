@@ -11,13 +11,22 @@ USING (
         HAVING count(*) = g.to_id - g.from_id + 1
     ),
     affected AS (
-        SELECT DISTINCT s.symbol, date_trunc('minute', s.trade_time) AS window_start
+        SELECT s.symbol, date_trunc('minute', s.trade_time) AS window_start,
+            max(s.processed_at) AS newest_recovery
         FROM recovered g
         JOIN lake.silver.aggtrade s
           ON s.symbol = g.symbol AND s.agg_trade_id BETWEEN g.from_id AND g.to_id
         JOIN lake.ref.klines_1m r
           ON r.symbol = s.symbol AND r.window_start = date_trunc('minute', s.trade_time)
         WHERE r.window_start <= current_timestamp - INTERVAL '2' MINUTE
+        GROUP BY 1, 2
+    ),
+    pending AS (
+        SELECT a.symbol, a.window_start
+        FROM affected a
+        LEFT JOIN lake.gold.candles_1m g
+          ON g.symbol = a.symbol AND g.window_start = a.window_start
+        WHERE g.repaired IS DISTINCT FROM true OR g.updated_at < a.newest_recovery
     ),
     stats AS (
         SELECT a.symbol, a.window_start,
@@ -31,10 +40,9 @@ USING (
             sum(if(s.is_buyer_maker, s.quantity, DECIMAL '0')) AS sell_volume,
             min(s.agg_trade_id) AS first_agg_id,
             max(s.agg_trade_id) AS last_agg_id
-        FROM affected a
+        FROM pending a
         JOIN lake.silver.aggtrade s
-          ON s.symbol = a.symbol AND s.trade_time >= a.window_start
-             AND s.trade_time < a.window_start + INTERVAL '1' MINUTE
+          ON s.symbol = a.symbol AND date_trunc('minute', s.trade_time) = a.window_start
         GROUP BY 1, 2
     )
     SELECT *, window_start + INTERVAL '1' MINUTE AS window_end,

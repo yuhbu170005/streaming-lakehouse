@@ -13,6 +13,7 @@
 !orchestration/
 !orchestration/*.py
 !orchestration/dagster.yaml
+!orchestration/workspace.yaml
 !orchestration/sql/
 !orchestration/sql/*.sql
 !dbt_project/
