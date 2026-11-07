@@ -175,6 +175,7 @@ services:
   silver:
     <<: *stream
     command: ["silver"]
+    mem_limit: 2200m
 
   gold:
     <<: *stream

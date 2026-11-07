@@ -23,6 +23,9 @@ class State:
             CREATE TABLE IF NOT EXISTS reference_requests (
                 symbol TEXT, minute_ms INTEGER, PRIMARY KEY(symbol, minute_ms)
             );
+            CREATE TABLE IF NOT EXISTS reference_cursors (
+                symbol TEXT PRIMARY KEY, minute_ms INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY, event TEXT NOT NULL);
             """
         )
@@ -104,6 +107,32 @@ class State:
             "SELECT * FROM reference_requests WHERE minute_ms <= ? ORDER BY minute_ms LIMIT 50",
             (now_ms() - 65_000,),
         ).fetchall()
+
+    def acknowledge_references(self, candles):
+        with self.db:
+            for candle in candles:
+                symbol, minute = candle["symbol"], candle["kline"]["t"]
+                cursor = self.db.execute(
+                    "SELECT minute_ms FROM reference_cursors WHERE symbol = ?",
+                    (symbol,),
+                ).fetchone()
+                if cursor is not None:
+                    if minute <= cursor["minute_ms"]:
+                        continue
+                    self.db.executemany(
+                        "INSERT OR IGNORE INTO reference_requests VALUES (?, ?)",
+                        (
+                            (symbol, missing)
+                            for missing in range(
+                                cursor["minute_ms"] + 60_000, minute, 60_000
+                            )
+                        ),
+                    )
+                self.db.execute(
+                    "INSERT INTO reference_cursors VALUES (?, ?) ON CONFLICT(symbol) "
+                    "DO UPDATE SET minute_ms = excluded.minute_ms",
+                    (symbol, minute),
+                )
 
     def finish_reference(self, symbol, minute):
         with self.db:

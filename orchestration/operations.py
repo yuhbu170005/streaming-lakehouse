@@ -1,9 +1,11 @@
 import argparse
 import os
 import subprocess
+import time
 from pathlib import Path
 
 from trino.dbapi import connect
+from trino.exceptions import TrinoConnectionError, TrinoQueryError
 
 ROOT = Path(__file__).resolve().parent
 TABLES = (
@@ -32,7 +34,18 @@ def execute(sql):
 
 
 def sql_file(name):
-    return execute((ROOT / "sql" / f"{name}.sql").read_text())
+    # These queries are read-only or replay-safe MERGEs.
+    sql = (ROOT / "sql" / f"{name}.sql").read_text()
+    for delay in (2, 5, 10):
+        try:
+            return execute(sql)
+        except TrinoConnectionError:
+            time.sleep(delay)
+        except TrinoQueryError as error:
+            if error.error_name not in {"ICEBERG_COMMIT_ERROR", "SERVER_STARTING_UP"}:
+                raise
+            time.sleep(delay)
+    return execute(sql)
 
 
 def repair():

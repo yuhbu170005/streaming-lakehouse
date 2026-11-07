@@ -56,7 +56,12 @@ def kafka(spark, topic):
 
 
 def iceberg(spark, table):
-    return spark.readStream.format("iceberg").load(f"lake.{table}")
+    return (
+        spark.readStream.format("iceberg")
+        .option("streaming-max-files-per-micro-batch", "128")
+        .option("streaming-max-rows-per-micro-batch", "25000")
+        .load(f"lake.{table}")
+    )
 
 
 def writer(frame, name, *, checkpoint=None):

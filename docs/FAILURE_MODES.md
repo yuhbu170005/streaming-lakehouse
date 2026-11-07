@@ -25,3 +25,5 @@ These are design expectations. Each phase adds verification evidence for the com
 | Metabase or Trino | Temporary restart | Dashboards or scheduled SQL unavailable | Query services recover independently. Kafka, Spark, and Iceberg continue ingestion and materialization. |
 | Dagster | A run outlives a daemon restart in its run store | A serial queue can remain blocked | Store runs in PostgreSQL and monitor startup and execution timeouts. Streaming queries continue independently. |
 | Benchmark host | The laptop sleeps or the sampling clock jumps | Wall-clock duration can overstate continuous work | Track sample timestamps, record interrupted runs, and exclude them from acceptance results. |
+| Kline feed | A disconnect skips a minute close even though trade IDs remain contiguous | Gold has a candle with no official comparison row | Persist the last acknowledged closed minute per symbol and recover skipped closes through the public kline endpoint. |
+| Spark catch-up | A long backlog creates an oversized Iceberg micro-batch | Driver memory can spike during validation and merge | Cap Iceberg input at 128 files and a soft limit of 25,000 rows per micro-batch. |

@@ -65,7 +65,7 @@ def test_wire_schema_evolution():
 def test_only_closed_klines():
     data = {
         "stream": "btcusdt@kline_1m",
-        "data": {"k": {"i": "1m", "s": S, "x": False}},
+        "data": {"k": {"i": "1m", "s": S, "x": False, "t": 1730000040000}},
     }
     assert decode_stream(json.dumps(data), "test", "test", {S})[0] is None
     data["data"]["k"]["x"] = True
@@ -266,3 +266,26 @@ def test_reference_fixture_matches_closed_market_minute(tmp_path, monkeypatch):
             await runner.cleanup()
 
     asyncio.run(verify())
+
+
+def test_reference_cursor_recovers_skipped_minutes_without_a_trade_gap(tmp_path):
+    path = tmp_path / "state.db"
+    state = State(path)
+
+    def candle(minute):
+        return {"symbol": S, "kline": {"t": minute}}
+
+    state.acknowledge_references([candle(0), candle(180_000), candle(0)])
+    state.db.close()
+    reopened = State(path)
+    assert not reopened.pending()
+    assert [row["minute_ms"] for row in reopened.closed_reference_requests()] == [
+        60_000,
+        120_000,
+    ]
+    reopened.acknowledge_references([candle(240_000)])
+    assert [row["minute_ms"] for row in reopened.closed_reference_requests()] == [
+        60_000,
+        120_000,
+    ]
+    reopened.db.close()

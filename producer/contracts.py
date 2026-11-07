@@ -61,6 +61,13 @@ def decode_stream(message, connection, producer_id, allowlist):
         ):
             raise ValueError("invalid kline")
         if candle.get("x") is True:
+            minute = candle.get("t")
+            if (
+                type(minute) is not int
+                or not 0 <= minute <= now_ms()
+                or minute % 60_000
+            ):
+                raise ValueError("invalid kline minute")
             return (
                 KLINE,
                 symbol,

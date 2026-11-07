@@ -93,6 +93,9 @@ async def publish_live(queue, publisher, state):
         gaps, duplicates = state.acknowledge(
             [event for topic, _, event in batch if topic == RAW]
         )
+        state.acknowledge_references(
+            [event for topic, _, event in batch if topic == KLINE]
+        )
         GAPS.inc(gaps)
         DUPLICATES.inc(duplicates)
         for _ in batch:
