@@ -1,0 +1,5 @@
+2026-11-07T18:58:03.380690+00:00 synthetic minio-restart
+ Container streaming-lakehouse-demo-minio-1 Restarting
+ Container streaming-lakehouse-demo-minio-1 Started
+Silver range [1001630, 1001829] complete after 20.24s from service restore; action took 0.59s
+Warehouse invariants: {'unexplained_id_gaps': 0, 'duplicate_silver_keys': 0, 'duplicate_bronze_offsets': 0, 'closed_gold_silver_differences': 0, 'valid_bronze_keys_missing_silver': 0, 'silver_keys_missing_bronze': 0}

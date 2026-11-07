@@ -1,0 +1,28 @@
+2026-11-07T19:16:16.740022+00:00 synthetic late-data
+%3|1794078977.570|FAIL|rdkafka#producer-1| [thrd:localhost:29092/0]: localhost:29092/0: Connect to ipv6#[::1]:29092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1794078979.030|FAIL|rdkafka#producer-1| [thrd:localhost:29092/0]: localhost:29092/0: Connect to ipv6#[::1]:29092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1794078980.533|FAIL|rdkafka#producer-1| [thrd:localhost:29092/0]: localhost:29092/0: Connect to ipv6#[::1]:29092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1794078982.541|FAIL|rdkafka#producer-1| [thrd:localhost:29092/0]: localhost:29092/0: Connect to ipv6#[::1]:29092 failed: Connection refused (after 0ms in state CONNECT)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "./chaos/run.py", line 336, in <module>
+    main()
+  File "./chaos/run.py", line 330, in main
+    cases[args.case]()
+  File "./chaos/run.py", line 277, in late_data
+    execute(f"SELECT volume, trade_count FROM lake.gold.candles_1m WHERE {target}")
+  File "./orchestration/operations.py", line 28, in execute
+    cursor.execute(sql)
+  File "./.venv/lib/python3.12/site-packages/trino/dbapi.py", line 670, in execute
+    self._iterator = iter(self._query.execute())
+                          ^^^^^^^^^^^^^^^^^^^^^
+  File "./.venv/lib/python3.12/site-packages/trino/client.py", line 1026, in execute
+    new_rows = self.fetch()
+               ^^^^^^^^^^^^
+  File "./.venv/lib/python3.12/site-packages/trino/client.py", line 1080, in fetch
+    status = self._request.process(response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "./.venv/lib/python3.12/site-packages/trino/client.py", line 770, in process
+    raise self._process_error(response["error"], response.get("id"))
+trino.exceptions.TrinoQueryError: TrinoQueryError(type=INTERNAL_ERROR, name=SERVER_STARTING_UP, message="Trino server is still initializing", query_id=20261107_191717_00000_4ypvi)

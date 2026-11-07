@@ -1,0 +1,89 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: Lakehouse
+    folder: Lakehouse
+    interval: 30s
+    rules:
+      - uid: lakehouse-no-trades
+        title: Lakehouse no trade data
+        condition: B
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: No acknowledged Spot trade events in the last two minutes
+        data:
+          - &prometheus
+            refId: A
+            datasourceUid: lakehouse-prom
+            relativeTimeRange: {from: 180, to: 0}
+            model: &instant
+              datasource: {type: prometheus, uid: lakehouse-prom}
+              refId: A
+              instant: true
+              range: false
+              expr: 'sum(rate(producer_messages_total{topic="binance.aggtrade.raw.v1"}[2m])) or vector(0)'
+          - &threshold
+            refId: B
+            datasourceUid: __expr__
+            relativeTimeRange: {from: 0, to: 0}
+            model: &math
+              datasource: {type: __expr__, uid: __expr__}
+              refId: B
+              type: math
+              expression: '$A == 0'
+
+      - uid: lakehouse-kafka-lag
+        title: Lakehouse Kafka lag
+        condition: B
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: A Spark Kafka source is falling behind
+        data:
+          - <<: *prometheus
+            model:
+              <<: *instant
+              expr: 'max(spark_kafka_offset_lag) or vector(0)'
+          - <<: *threshold
+            model:
+              <<: *math
+              expression: '$A > 30000'
+
+      - uid: lakehouse-open-gap
+        title: Lakehouse unresolved trade gap
+        condition: B
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: At least one trade gap has remained open for five minutes
+        data:
+          - <<: *prometheus
+            model:
+              <<: *instant
+              expr: 'max(producer_open_gaps) or vector(0)'
+          - <<: *threshold
+            model:
+              <<: *math
+              expression: '$A > 0'
+
+      - uid: lakehouse-candle-mismatch
+        title: Lakehouse candle mismatch
+        condition: B
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: A recent closed candle differs from Binance
+        data:
+          - <<: *prometheus
+            model:
+              <<: *instant
+              expr: 'sum(lakehouse_reconciliation_candles{status="mismatch"}) or vector(0)'
+          - <<: *threshold
+            model:
+              <<: *math
+              expression: '$A > 0'

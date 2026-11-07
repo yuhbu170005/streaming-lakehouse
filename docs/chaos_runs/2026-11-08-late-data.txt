@@ -1,0 +1,3 @@
+2026-11-07T19:18:18.102256+00:00 synthetic late-data
+Late record persisted in Silver, Gold stayed unchanged, watermark metric incremented
+Warehouse invariants: {'duplicate_silver_keys': 0, 'duplicate_bronze_offsets': 0, 'unexplained_id_gaps': 0, 'valid_bronze_keys_missing_silver': 0, 'closed_gold_silver_differences': 0, 'silver_keys_missing_bronze': 0}

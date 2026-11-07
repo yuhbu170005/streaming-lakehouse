@@ -1,0 +1,5 @@
+2026-11-07T18:57:50.689095+00:00 synthetic broker-restart
+ Container streaming-lakehouse-demo-redpanda-1 Restarting
+ Container streaming-lakehouse-demo-redpanda-1 Started
+Silver range [1001529, 1001630] complete after 9.80s from service restore; action took 0.92s
+Warehouse invariants: {'duplicate_bronze_offsets': 0, 'duplicate_silver_keys': 0, 'unexplained_id_gaps': 0, 'valid_bronze_keys_missing_silver': 0, 'closed_gold_silver_differences': 0, 'silver_keys_missing_bronze': 0}

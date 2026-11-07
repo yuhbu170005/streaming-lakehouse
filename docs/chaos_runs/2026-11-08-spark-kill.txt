@@ -1,0 +1,35 @@
+2026-11-07T18:57:21.402004+00:00 synthetic spark-kill
+Silver reported an active trigger immediately before SIGKILL
+ Container streaming-lakehouse-demo-silver-1 Killing
+ Container streaming-lakehouse-demo-silver-1 Killed
+ Container streaming-lakehouse-demo-minio-1 Running
+ Container streaming-lakehouse-demo-postgres-1 Running
+ Container streaming-lakehouse-demo-catalog-1 Running
+ Container streaming-lakehouse-demo-bucket-1 Starting
+ Container streaming-lakehouse-demo-bucket-1 Started
+ Container streaming-lakehouse-demo-postgres-1 Waiting
+ Container streaming-lakehouse-demo-bucket-1 Waiting
+ Container streaming-lakehouse-demo-bucket-1 Exited
+ Container streaming-lakehouse-demo-postgres-1 Healthy
+ Container streaming-lakehouse-demo-catalog-1 Waiting
+ Container streaming-lakehouse-demo-catalog-1 Healthy
+ Container streaming-lakehouse-demo-bootstrap-1 Starting
+ Container streaming-lakehouse-demo-bootstrap-1 Started
+ Container streaming-lakehouse-demo-bootstrap-1 Waiting
+ Container streaming-lakehouse-demo-bootstrap-1 Exited
+ Container streaming-lakehouse-demo-silver-1 Starting
+ Container streaming-lakehouse-demo-silver-1 Started
+ Container streaming-lakehouse-demo-silver-1 Waiting
+ Container streaming-lakehouse-demo-postgres-1 Waiting
+ Container streaming-lakehouse-demo-minio-1 Waiting
+ Container streaming-lakehouse-demo-catalog-1 Waiting
+ Container streaming-lakehouse-demo-bootstrap-1 Waiting
+ Container streaming-lakehouse-demo-bucket-1 Waiting
+ Container streaming-lakehouse-demo-minio-1 Healthy
+ Container streaming-lakehouse-demo-bucket-1 Exited
+ Container streaming-lakehouse-demo-postgres-1 Healthy
+ Container streaming-lakehouse-demo-bootstrap-1 Exited
+ Container streaming-lakehouse-demo-catalog-1 Healthy
+ Container streaming-lakehouse-demo-silver-1 Healthy
+Silver range [1001229, 1001529] complete after 0.46s from service restore; action took 23.92s
+Warehouse invariants: {'duplicate_silver_keys': 0, 'unexplained_id_gaps': 0, 'duplicate_bronze_offsets': 0, 'valid_bronze_keys_missing_silver': 0, 'closed_gold_silver_differences': 0, 'silver_keys_missing_bronze': 0}

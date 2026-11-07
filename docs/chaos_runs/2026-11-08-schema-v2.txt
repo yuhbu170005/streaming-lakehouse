@@ -1,0 +1,15 @@
+2026-11-07T19:00:56.567350+00:00 synthetic schema-v2
+ Container streaming-lakehouse-demo-producer-1 Recreate
+ Container streaming-lakehouse-demo-producer-1 Recreated
+ Container streaming-lakehouse-demo-producer-1 Starting
+ Container streaming-lakehouse-demo-producer-1 Started
+ Container streaming-lakehouse-demo-producer-1 Waiting
+ Container streaming-lakehouse-demo-producer-1 Healthy
+ Container streaming-lakehouse-demo-producer-1 Recreate
+ Container streaming-lakehouse-demo-producer-1 Recreated
+ Container streaming-lakehouse-demo-producer-1 Starting
+ Container streaming-lakehouse-demo-producer-1 Started
+ Container streaming-lakehouse-demo-producer-1 Waiting
+ Container streaming-lakehouse-demo-producer-1 Healthy
+Avro v2 read through Bronze and Silver with contiguous trade IDs
+Warehouse invariants: {'duplicate_bronze_offsets': 0, 'unexplained_id_gaps': 0, 'duplicate_silver_keys': 0, 'closed_gold_silver_differences': 0, 'valid_bronze_keys_missing_silver': 0, 'silver_keys_missing_bronze': 0}

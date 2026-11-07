@@ -233,7 +233,13 @@ def gold_late_count():
 def late_data():
     # This symbol has no fixture trades, so synthetic late records form their own ID sequence.
     late_symbol = "LATEUSDT"
-    minute_ms = (now_ms() // 60_000 - 3) * 60_000
+    latest_gold = eventually(
+        lambda: execute(
+            f"SELECT CAST(to_unixtime(max(window_start)) * 1000 AS BIGINT) "
+            f"FROM lake.gold.candles_1m WHERE symbol = '{SYMBOL}'"
+        )[0][0]
+    )
+    minute_ms = latest_gold - 180_000
     target = (
         f"symbol = '{late_symbol}' AND to_unixtime(window_start) = {minute_ms // 1000}"
     )

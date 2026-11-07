@@ -1,0 +1,16 @@
+2026-11-07T19:14:21.760169+00:00 synthetic late-data
+%3|1794078862.953|FAIL|rdkafka#producer-1| [thrd:localhost:29092/0]: localhost:29092/0: Connect to ipv6#[::1]:29092 failed: Connection refused (after 0ms in state CONNECT)
+%4|1794078864.007|GETPID|rdkafka#producer-1| [thrd:main]: Failed to acquire idempotence PID from broker 127.0.0.1:29092/bootstrap: Local: Broker handle destroyed without termination: retrying
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "./chaos/run.py", line 322, in <module>
+    print(f"{datetime.now(UTC).isoformat()} synthetic {args.case}", flush=True)
+    ^^^^^^
+  File "./chaos/run.py", line 316, in main
+    }
+    ^^
+  File "./chaos/run.py", line 262, in late_data
+    }
+
+AssertionError

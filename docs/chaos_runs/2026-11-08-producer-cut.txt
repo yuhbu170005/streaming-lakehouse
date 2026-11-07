@@ -1,0 +1,4 @@
+2026-11-07T19:11:38.753369+00:00 synthetic producer-cut
+Silver range [1009829, 1011190] complete in 28.46s after network restore; 1 recovered gaps covered 1294 IDs
+Repaired and reconciled 2 closed outage candles in 4.59s after Silver recovery
+Warehouse invariants: {'duplicate_silver_keys': 0, 'duplicate_bronze_offsets': 0, 'unexplained_id_gaps': 0, 'valid_bronze_keys_missing_silver': 0, 'closed_gold_silver_differences': 0, 'silver_keys_missing_bronze': 0}

@@ -27,7 +27,7 @@ Use `make up-lite && make start-streams` to run ingestion, the lakehouse, and ba
 | Metabase | http://127.0.0.1:3002 |
 | Prometheus | http://127.0.0.1:9090 |
 
-`make dashboards` builds the dbt marts, provisions the Metabase dashboards, and runs their queries. It stores the generated local admin password in `data/metabase-password` with owner-only permissions. See [sample SQL](docs/queries.sql) and [architecture](docs/ARCHITECTURE.md).
+`make dashboards` builds the dbt marts, provisions the Metabase dashboards, and runs their queries. It stores the generated local admin password in `data/metabase-password` with owner-only permissions. See the [dashboard captures](docs/BENCHMARKS.md#live-startup-and-bi-check), [sample SQL](docs/queries.sql) and [architecture](docs/ARCHITECTURE.md).
 
 ```sh
 make recon

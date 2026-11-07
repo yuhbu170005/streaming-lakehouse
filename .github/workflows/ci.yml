@@ -46,6 +46,6 @@ jobs:
         with:
           name: compiled-dbt-and-docs
           path: |
-            docs/*.md
+            docs/
             dbt_project/target/manifest.json
             dbt_project/target/compiled/

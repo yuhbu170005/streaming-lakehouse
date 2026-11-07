@@ -1,0 +1,20 @@
+2026-11-07T18:58:25.345385+00:00 synthetic poison
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "./chaos/run.py", line 300, in <module>
+    main()
+  File "./chaos/run.py", line 294, in main
+    cases[args.case]()
+  File "./chaos/run.py", line 174, in poison
+    result = compose(
+             ^^^^^^^^
+  File "./chaos/run.py", line 43, in compose
+    return command(*COMPOSE, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "./chaos/run.py", line 36, in command
+    result = subprocess.run(
+             ^^^^^^^^^^^^^^^
+  File "~/.local/share/uv/python/cpython-3.12.16-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('docker', 'compose', '-p', 'streaming-lakehouse-demo', '-f', 'docker-compose.yml', '-f', 'compose.demo.yml', '--profile', 'core', '--profile', 'query', 'exec', '-T', 'redpanda', 'rpk', 'topic', 'consume', 'binance.aggtrade.dlq.v1', '-X', 'brokers=redpanda:9092', '-o', 'end-1', '-n', '1')' returned non-zero exit status 1.

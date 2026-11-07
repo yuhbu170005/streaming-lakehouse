@@ -1,0 +1,4 @@
+2026-11-07T19:01:27.279990+00:00 synthetic producer-cut
+Backfilled 1003683..1003689 into Silver in 1.37s
+Repair and reconciliation SQL took 5.88s
+Warehouse invariants: {'unexplained_id_gaps': 0, 'duplicate_bronze_offsets': 0, 'duplicate_silver_keys': 0, 'valid_bronze_keys_missing_silver': 0, 'closed_gold_silver_differences': 0, 'silver_keys_missing_bronze': 0}

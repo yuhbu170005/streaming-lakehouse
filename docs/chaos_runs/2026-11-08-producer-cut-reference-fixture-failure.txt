@@ -1,0 +1,19 @@
+2026-11-07T19:04:52.659493+00:00 synthetic producer-cut
+Silver range [1005729, 1007108] complete in 38.22s after network restore; 1 recovered gaps covered 1339 IDs
+Retry: TrinoConnectionError: failed to fetch: HTTPConnectionPool(host='127.0.0.1', port=28080): Max retries exceeded with url: /v1/statement/executing/20261107_190905_00059_kgxv5/y6804236ba4d12932d88575baa8ff225d29945829/0 (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=28080): Failed to establish a new connection: [Errno 61] Connection refused"))
+Retry: TrinoConnectionError: failed to execute: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Retry: TrinoQueryError: TrinoQueryError(type=INTERNAL_ERROR, name=SERVER_STARTING_UP, message="Trino server is still initializing", query_id=20261107_190918_00000_dwyjf)
+Retry: TrinoQueryError: TrinoQueryError(type=INTERNAL_ERROR, name=SERVER_STARTING_UP, message="Trino server is still initializing", query_id=20261107_190921_00001_dwyjf)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "./chaos/run.py", line 322, in <module>
+    main()
+  File "./chaos/run.py", line 316, in main
+    cases[args.case]()
+  File "./chaos/run.py", line 184, in producer_cut
+    matched = eventually(candles_repaired, timeout=180)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "./chaos/run.py", line 56, in eventually
+    raise TimeoutError("expected warehouse condition did not hold")
+TimeoutError: expected warehouse condition did not hold

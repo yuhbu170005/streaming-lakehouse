@@ -23,3 +23,4 @@ These are design expectations. Each phase adds verification evidence for the com
 | Maintenance | Checkpoint points to an expired source snapshot | Incremental reader requires an explicit replay plan | Keep three days of snapshots, monitor lag, and verify checkpoint recovery before reducing retention. |
 | Gold | Data older than the watermark | Closed Gold and full Silver can differ | Preserve Silver, count the late data, and rebuild eligible windows affected by a completed gap. |
 | Metabase or Trino | Temporary restart | Dashboards or scheduled SQL unavailable | Query services recover independently. Kafka, Spark, and Iceberg continue ingestion and materialization. |
+| Dagster | A run outlives a daemon restart in its run store | A serial queue can remain blocked | Store runs in PostgreSQL and monitor startup and execution timeouts. Streaming queries continue independently. |

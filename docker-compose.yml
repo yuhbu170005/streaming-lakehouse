@@ -210,7 +210,9 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
-    volumes: [dagster-data:/dagster]
+    volumes:
+      - dagster-data:/dagster
+      - ./orchestration/dagster.yaml:/dagster/dagster.yaml:ro
     ports: ["127.0.0.1:3001:3000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/server_info', timeout=2)"]
