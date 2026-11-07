@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: Binance Spot aggregate trades fixture
+  version: 1.0.0
+servers:
+  - url: https://data-api.binance.vision
+paths:
+  /api/v3/aggTrades:
+    get:
+      operationId: aggTrades
+      parameters:
+        - {in: query, name: symbol, required: true, schema: {type: string}}
+        - {in: query, name: fromId, schema: {type: integer}}
+        - {in: query, name: limit, schema: {type: integer}}
+      responses:
+        '200':
+          description: An inclusive page of aggregate trades
+          content:
+            application/json:
+              schema: {type: array, items: {type: object}}
+              example:
+                - {a: 11, p: '10.1', q: '0.2', f: 33, l: 33, T: 1794077000000, m: false}
+                - {a: 12, p: '10.2', q: '0.3', f: 34, l: 35, T: 1794077000001, m: true}

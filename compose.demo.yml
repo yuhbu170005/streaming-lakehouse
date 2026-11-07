@@ -8,7 +8,7 @@ services:
       - --smp=1
       - --memory=768M
       - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:29092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:29092
       - --schema-registry-addr=0.0.0.0:8081
     ports: !override ["127.0.0.1:29092:19092", "127.0.0.1:28081:8081"]
 

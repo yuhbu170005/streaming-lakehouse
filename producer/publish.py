@@ -50,10 +50,15 @@ class Publisher:
                 failures.append(str(error))
                 ERRORS.inc()
 
-        for topic, symbol, event in batch:
-            value = self.encode(topic, event)
-            self.client.produce(topic, key=symbol, value=value, on_delivery=delivery)
-        if self.client.flush(17) or failures:
+        try:
+            for topic, symbol, event in batch:
+                value = self.encode(topic, event)
+                self.client.produce(
+                    topic, key=symbol, value=value, on_delivery=delivery
+                )
+        finally:
+            pending = self.client.flush(17)
+        if pending or failures:
             raise RuntimeError(f"Kafka delivery incomplete: {failures[:1]}")
 
     async def send(self, batch):
@@ -71,7 +76,7 @@ class Publisher:
 async def create_publisher(http):
     version = os.getenv("AGGTRADE_SCHEMA_VERSION", "1")
     schema = json.loads(Path(f"schemas/aggtrade-v{version}.avsc").read_text())
-    registry = os.getenv("SCHEMA_REGISTRY_URL", "http://localhost:8081")
+    registry = os.getenv("SCHEMA_REGISTRY_URL", "http://127.0.0.1:8081")
     subject = f"{registry}/subjects/{RAW}-value"
     async with http.put(
         f"{registry}/config/{RAW}-value", json={"compatibility": "BACKWARD"}
@@ -83,5 +88,5 @@ async def create_publisher(http):
         response.raise_for_status()
         schema_id = (await response.json())["id"]
     return Publisher(
-        os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:19092"), schema_id, schema
+        os.getenv("KAFKA_BOOTSTRAP_SERVERS", "127.0.0.1:19092"), schema_id, schema
     )

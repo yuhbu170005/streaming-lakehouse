@@ -212,7 +212,7 @@ def kafka_trade_ids(producer_id):
     schema = json.loads(Path("schemas/aggtrade-v1.avsc").read_text())
     consumer = Consumer(
         {
-            "bootstrap.servers": "localhost:19092",
+            "bootstrap.servers": "127.0.0.1:19092",
             "group.id": producer_id,
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,

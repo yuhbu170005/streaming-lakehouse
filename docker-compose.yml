@@ -37,13 +37,14 @@ services:
       - --smp=1
       - --memory=1G
       - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:19092
       - --schema-registry-addr=0.0.0.0:8081
     ports: ["127.0.0.1:19092:19092", "127.0.0.1:8081:8081"]
     volumes:
       - broker:/var/lib/redpanda/data
       - ./scripts/topics.sh:/opt/lakehouse/topics.sh:ro
     mem_limit: 1500m
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "rpk", "cluster", "info", "-X", "brokers=localhost:9092"]
       interval: 5s
@@ -88,6 +89,12 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-lakehouse-local-only}
     ports: ["127.0.0.1:9001:9001"]
     volumes: [objects:/data]
+    healthcheck:
+      test: ["CMD", "/bin/busybox", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+    restart: unless-stopped
     mem_limit: 768m
     profiles: [core]
 
@@ -98,7 +105,7 @@ services:
     environment: *s3-env
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
     mem_limit: 192m
     profiles: [core]
 
@@ -117,6 +124,7 @@ services:
       timeout: 4s
       retries: 24
     mem_limit: 384m
+    restart: unless-stopped
     profiles: [core]
 
   catalog:
@@ -144,6 +152,7 @@ services:
       timeout: 4s
       retries: 24
     mem_limit: 640m
+    restart: unless-stopped
     profiles: [core]
 
   bootstrap:
@@ -203,6 +212,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lakehouse-db-local-only}
     volumes: [dagster-data:/dagster]
     ports: ["127.0.0.1:3001:3000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/server_info', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
     mem_limit: 1024m
     profiles: [query]
 
@@ -221,6 +236,12 @@ services:
       trino:
         condition: service_healthy
     ports: ["127.0.0.1:3002:3000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
     mem_limit: 1200m
     profiles: [query]
 
@@ -234,6 +255,12 @@ services:
       - ./config/prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
     ports: ["127.0.0.1:9090:9090"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
     mem_limit: 512m
     profiles: [obs]
 
@@ -251,6 +278,12 @@ services:
       prometheus:
         condition: service_started
     ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
     mem_limit: 512m
     profiles: [obs]
 
@@ -261,6 +294,12 @@ services:
     depends_on:
       trino:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9111/metrics', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
     mem_limit: 256m
     profiles: [query]
 

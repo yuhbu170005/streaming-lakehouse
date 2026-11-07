@@ -1,0 +1,14 @@
+version: 1
+id: 721b32c0-93e4-4499-94d5-88c4bd534036
+name: Binance Spot aggregate trades fixture
+slug: binance-spot-aggregate-trades-fi
+protocol: http
+port: 4500
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
+generatedFrom:
+  type: spec
+  mode: static
+  path: ../binance.yaml
