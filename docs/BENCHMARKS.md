@@ -111,3 +111,25 @@ After recent-trade screening, all 200 configured symbols appeared in Silver. The
 | 200 / 200 | 1,800.82 s | 60,430 | 33.56 | 18,341 / 83,799 / 100,000 ms | 0 |
 
 The first two hours of the primary run accounted for all 2,400 expected symbol-minute slots. There were 2,376 exact matches, 24 official no-trade candles, and zero missing inputs or mismatches.
+
+### Six-hour Binance acceptance
+
+The primary 20-symbol run covered 03:35:42–09:35:44 Asia/Ho_Chi_Minh on 2026-11-08, or 21,601.76 seconds after excluding warm-up. The benchmark started at `85fed7e`. It included checkpointed streaming updates and the independently restarted Dagster code service.
+
+| Measurement | Result |
+|---|---:|
+| Expected and observed symbol-minute slots | 7,200 / 7,200 |
+| Exact Binance candle matches | 7,056 |
+| Official no-trade candles | 144 |
+| Mismatches / missing inputs | 0 / 0 |
+| Silver rows processed | 296,795 |
+| Silver rows/s | 13.74 |
+| Backfilled Silver rows processed | 87 |
+| End-to-end latency p50 / p95 / p99 | 16,057 / 47,945 / 104,757 ms |
+| Container resource samples | 344 |
+
+The data crossed midnight UTC and retained full candle coverage after the daily partition changed. The raw report is `data/benchmark-binance-6h.json`. Reproduce using `make acceptance-live`.
+
+### Fresh clone
+
+A clean clone at `98d73d5` started with empty named volumes and cached images on the same host. Silver returned 508 rows in Trino 76 seconds after starting `make start-streams`. The command sequence through `make dashboards` took 223 seconds. The fresh dbt build passed all 14 checks and all six Metabase card queries completed.
